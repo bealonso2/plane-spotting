@@ -2,8 +2,11 @@ from bs4 import BeautifulSoup
 import requests
 from datetime import time
 
+# this class represents a flight which consists of associated flights, an ID, an airline, a destination,
+# a status (delayed, on time, arrived), a time (arrival or departure), the terminal, and gate
 class flight():
 
+  # the fields in flight
   associates = []
   flightId = ""
   airline = ""
@@ -13,6 +16,7 @@ class flight():
   terminal = ""
   gate = ""
 
+  # method to create a flight
   def __init__(self, airline_code, airline_name, flight_number, destination, status, schedule_time, update_time, terminal, gate):
     self.flightId = "" + airline_code + " " + flight_number
     self.airline = airline_name
@@ -22,12 +26,16 @@ class flight():
     self.terminal = terminal
     self.gate = gate
 
+  # how each flight is output. In the future, each associated flight will also be listed
   def __str__(self):
     return self.flightId + " " + self.destination + " " + self.time
 
+  # if the flights are associated
+  # E.g. a DAL flight that also is listed as KLM. Same time and same destination.
   def addAssociate(self, flight):
     self.associates.append(flight.flightId)
 
+  # function to determine if two flights are equal
   # def equals(self, fl):
     
   #   if self.time == fl.time:
@@ -45,10 +53,14 @@ class flight():
   #             return True
   #   return False
 
+# this class stores all of the flight objects
 class flight_list():
 
   flights = [flight]
 
+  # the only function that I needed to explicityly define is how a flight
+  # should be added to the list. The function checks to see if the flight
+  # already exists, and if it does it is added to the associates
   def add(self, fl=flight):
     equal = False
     for x in self.flights:
@@ -61,7 +73,9 @@ class flight_list():
         equal = True
     if not equal:
       self.flights.append(fl)
-    
+
+# function to convert the time from a string to a string in 24hr format
+# that I can work with   
 def convertTime(time):
   hrs = time[0:(time.index(":"))]
   mins = time[(time.index(":") + 1) : (time.index(":") + 3)]
@@ -69,6 +83,8 @@ def convertTime(time):
     hrs = int(hrs) + 12
   return "" + str(hrs) + ":" + str(mins)
 
+# a funciton to convert time back to 12 hour time so that I can display the time
+# with an 'AM' or 'PM'
 def convertBack(time):
   start = time
   end = start + 1
@@ -90,21 +106,24 @@ def convertBack(time):
 
   return start_str + " and " + end_str
 
+# the url's containing data for arrivals and departures
 url_arrivals = 'https://tracker.flightview.com/FVAccess2/tools/fids/fidsDefault.asp?accCustId=FVWebFids&fidsId=20001&fidsInit=arrivals&fidsApt=RDU&fidsFilterAl=&fidsFilterDepap='
-#'https://tracker.flightview.com/FVAccess2/tools/fids/fidsDefault.asp?accCustId=FVWebFids&fidsId=20001&fidsInit=arrivals&fidsApt=RDU&fidsFilterAl=&fidsFilterDepap='
 url_departures = 'https://tracker.flightview.com/FVAccess2/tools/fids/fidsDefault.asp?accCustId=FVWebFids&fidsId=20001&fidsInit=departures&fidsApt=RDU&fidsFilterAl=&fidsFilterDepap='
 
+# the header to make the request. Ensuring the server that this is only for personal use
 headers = {'UserAgent': 'Brian Alonso (alonsobrian2@gmail.com) – Personal Use'}
+
+# requesting data from the two url's
 response = requests.get(url_arrivals,headers)
 response2 = requests.get(url_departures,headers)
 
+# creating beautiful soup objects to parse the data
 soup = BeautifulSoup(response.text, 'html.parser')
 soup2 = BeautifulSoup(response2.text, 'html.parser')
 
+# retrieving the relevant data
 body = soup.find(class_='data')
 body2 = soup2.find(class_='data')
-
-# rows = body.find('tr')
 
 # writing data to a file until I understand beautiful soup better
 f = open("data.txt","w+")
@@ -137,9 +156,11 @@ if f.mode == 'r': # check to make sure that the file was opened
       destination = data.pop(0)
       status = data.pop(0)
       schedule_time = convertTime(data.pop(0))
+      # if there isnt an update time, use the schedule time
       update_time = convertTime(data.pop(0)) if not (data[0][0:1].isalpha()) else schedule_time
       terminal = ""
       gate = ""
+      # retriving terminal and gate from the data
       if len(data) > 0:
         if (len(data[0]) >= 4) & (data[0][0:4] == "Term"):
           location = data.pop(0)
@@ -147,6 +168,7 @@ if f.mode == 'r': # check to make sure that the file was opened
           gate = location[9:len(location)]
         elif (len(data[0]) < 15) & (len(data[0]) > 0):
           data.pop(0)
+      # generating a flight
       fl = flight(airline_code,airline_name,flight_number,destination,status,schedule_time,update_time,terminal,gate)
       flights.add(fl)
 
